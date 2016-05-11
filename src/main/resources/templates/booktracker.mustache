@@ -1,0 +1,74 @@
+<html>
+<body>
+
+<h1>BookTracker</h1>
+
+
+{{#missingInfo}}
+    <div>Missing username or password!</div>
+{{/missingInfo}}
+
+{{#badInfo}}
+    <div>Username or password incorrect!</div>
+{{/badInfo}}
+
+<!-- if user is not logged in, display login/signup info -->
+{{^user}}
+
+<form action="/login" method="post">
+    <input type="text" placeholder="Enter your name" name="userName"/>
+    <input type="password" placeholder="Enter your password" name="password"/>
+    <button type="submit">Submit</button>
+</form>
+
+<div>
+    Don't have an account? <a href="/signup">Sign up here</a>!
+</div>
+
+{{/user}}
+
+<!-- if user is logged in, display logout/create forms -->
+{{#user}}
+
+    <h3>Welcome, {{userName}}</h3>
+    <form action="/logout" method="get">
+        <button type="submit">Logout</button>
+    </form>
+
+    <form action="/create-book" method="post">
+        <input type="text" placeholder="Enter book title" name="title"/>
+        <input type="text" placeholder="Enter author" name="author"/>
+        <input type="text" placeholder="Enter genre" name="genre"/>
+        <button type="submit">Submit</button>
+    </form>
+{{/user}}
+
+
+<!-- post all books whether user is logged in or not -->
+<h3>Books in the database</h3>
+
+{{#noBooks}}
+There are currently no books entered.
+{{/noBooks}}
+
+<ol>
+{{#books}}
+        <li>
+            {{title}}, by {{author}}. Genre: {{genre}}. Added by {{userName}}
+            {{#userNameMatches}}
+                <form action="/delete" method="post">
+                    <input type="hidden" name="bookId" value="{{bookId}}"/>
+                    <button type="submit">Delete</button>
+                </form>
+
+                <form action="/edit" method="get">
+                    <input type="hidden" name="bookId" value="{{bookId}}"/>
+                    <button type="submit">Edit</button>
+                </form>
+            {{/userNameMatches}}
+        </li>
+{{/books}}
+</ol>
+
+</body>
+</html>

@@ -1,0 +1,23 @@
+<html>
+<body>
+<h1>
+    Edit Book
+</h1>
+
+{{#book}}
+    Title: {{title}}</br>
+    Author: {{author}}</br>
+    Genre: {{genre}}</br>
+
+{{/book}}
+
+<form action="/edit" method="post">
+    <input type="text" placeholder="Enter new book title" name="title"/>
+    <input type="text" placeholder="Enter new author" name="author"/>
+    <input type="text" placeholder="Enter new genre" name="genre"/>
+    <input type="hidden" name="bookId" value="{{book.bookId}}">
+    <button type="submit">Submit</button>
+</form>
+
+</body>
+</html>
