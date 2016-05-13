@@ -1,26 +1,29 @@
 
+import org.h2.tools.Server;
 import spark.ModelAndView;
 import spark.Spark;
 import spark.template.mustache.MustacheTemplateEngine;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 import static spark.Spark.halt;
 
-public class Main {
+public class BookTracker {
 
-    static HashMap<String, User> users = new HashMap<>();
-    static ArrayList<Book> books = new ArrayList<>();
 
-    // @Doug: sorry for using a global variable
-    static int counter = 0;
+      public static void main(String[] args) throws SQLException{
 
-    public static void main(String[] args){
+        // establish jdbc connection and initialize db
+        Server server = Server.createTcpServer("-baseDir", "./data").start();
+        Connection connection = DriverManager.getConnection("jdbc:h2:" + server.getURL() + "/main");
+        BookTrackerService service = new BookTrackerService(connection);
+        service.initDatabase();
 
-        addTestUsers();
-        addTestBooks();
-
+        server.createWebServer().start();
 
         Spark.get(
                 "/",
@@ -39,20 +42,12 @@ public class Main {
                         user = request.session().attribute("user");
                         m.put("user", user);
                         m.put("userName", user.getUsername());
+                        ArrayList<Book> books = service.selectBooks(user.getUserId());
+                        m.put("books", books);
+
 
                     }
 
-                    try {
-                        for (int i = 0; i < books.size(); i++) {
-                            if (books.get(i).getUserName().equals(user.getUsername())) {
-                                books.get(i).userNameMatches = true;
-                            }
-                        }
-                    } catch (Exception e){
-                        m.put("noBooks", e);
-                    }
-
-                    m.put("books", books);
                     return new ModelAndView(m, "booktracker.mustache");
                 },
                 new MustacheTemplateEngine()
@@ -71,9 +66,7 @@ public class Main {
                         halt();
                     }
 
-
-                    // get the user from hashmap
-                    User user = users.get(userName);
+                    User user = service.selectUser(userName);
 
                     // if user doesn't exist, or password is incorrect, return error
                     if((user == null) || !user.getPassword().equals(password)){
@@ -90,6 +83,7 @@ public class Main {
                 }
         );
 
+        // send user to signup page
         Spark.get(
                 "/signup",
                 (request, response) -> {
@@ -103,12 +97,9 @@ public class Main {
                 "/create-user",
                 (request, response) -> {
 
-                    // create new user with user & password provided
+                    // create new user with user & password provided, add to jdb
                     User user = new User(request.queryParams("userName"), request.queryParams("password"));
-
-                    // add new user to the Hashmap
-                    users.put(user.getUsername(), user);
-
+                    service.insertUser(user);
 
                     // add user to session and redirect to webroot
                     request.session().attribute("user", user);
@@ -127,8 +118,8 @@ public class Main {
                     String author = request.queryParams("author");
                     String genre = request.queryParams("genre");
                     User user = request.session().attribute("user");
-                    Book book = new Book(title, author, genre, user.getUsername(), counter++);
-                    books.add(book);
+                    Book book = new Book(title, author, genre, user);
+                    service.insertBook(book);
 
 
                     // redirect to webroot
@@ -148,11 +139,7 @@ public class Main {
                     // delete the requested message
                     int deleteId = Integer.valueOf(request.queryParams("bookId"));
 
-                    for (int i = 0; i < books.size(); i++){
-                        if (books.get(i).bookId == deleteId) {
-                            books.remove(i);
-                        }
-                    }
+                    service.deleteBook(deleteId);
 
                     // redirect to webroot
                     response.redirect("/");
@@ -169,27 +156,11 @@ public class Main {
                     String newAuthor = request.queryParams("author");
                     String newGenre = request.queryParams("genre");
                     int editId = Integer.valueOf(request.queryParams("bookId"));
-                    Book book;
-
-                    for (int i = 0; i < books.size(); i++){
-                        if (books.get(i).bookId == editId) {
-                            book = books.get(i);
-                            if(!newTitle.equals("")){
-                                book.setTitle(newTitle);
-                            }
-
-                            if(!newAuthor.equals("")){
-                                book.setAuthor(newAuthor);
-                            }
-
-                            if(!newGenre.equals("")){
-                                book.setGenre(newGenre);
-                            }
-                        }
-                    }
+                    User user = request.session().attribute("user");
 
 
-
+                    Book book = new Book(editId, newTitle, newAuthor, newGenre, user);
+                    service.updateBook(book);
 
                     response.redirect("/");
                     halt();
@@ -204,7 +175,7 @@ public class Main {
 
                     HashMap m = new HashMap();
                     int editId = Integer.valueOf(request.queryParams("bookId"));
-                    Book book = books.get(editId);
+                    Book book = service.selectBook(editId);
 
                     m.put("book", book);
 
@@ -218,17 +189,6 @@ public class Main {
                 "/logout",
                 (request, response) -> {
                     // kill session, return to root for login
-                    HashMap m = new HashMap();
-
-                    try {
-                        for (int i = 0; i < books.size(); i++) {
-                                books.get(i).userNameMatches = false;
-                        }
-                    } catch (Exception e){
-                        m.put("noBooks", e);
-                    }
-
-
                     request.session().invalidate();
                     response.redirect("/");
                     halt();
@@ -236,20 +196,5 @@ public class Main {
                 },
                 new MustacheTemplateEngine()
         );
-
-
-    }
-
-    public static void addTestUsers(){
-        users.put("franks", new User("franks", "password"));
-        users.put("test", new User("test", "pw"));
-        users.put("dvf", new User("dvf", "zmakqo"));
-    }
-
-    public static void addTestBooks(){
-        books.add(new Book("Lord of the Rings", "J.R.R. Tolkien", "Fantasy", "franks", counter++));
-        books.add(new Book("A Game of Thrones", "George R.R. Martin", "Fantasy", "franks", counter++));
-        books.add(new Book("Ulysses", "James Joyce", "Literature", "dvf", counter++));
-        books.add(new Book("Good to Great", "Jim Collins", "Non-Fiction", "dvf", counter++));
     }
 }

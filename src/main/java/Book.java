@@ -3,26 +3,23 @@ public class Book {
     private String title;
     private String author;
     private String genre;
-    private String userName;
-    boolean userNameMatches = false;
-    int bookId;
+    private int bookId;
+    private User owner;
 
-    public Book(){
 
-    }
-
-    public Book(String title, String author, String genre, String userName, int bookId) {
-        this.title = title;
-        this.author = author;
-        this.genre = genre;
-        this.userName = userName;
+    public Book(int bookId, String title, String author, String genre, User owner){
         this.bookId = bookId;
-    }
-
-    public Book(String title, String author, String genre) {
         this.title = title;
         this.author = author;
         this.genre = genre;
+        this.owner = owner;
+    }
+
+    public Book(String title, String author, String genre, User owner){
+        this.title = title;
+        this.author = author;
+        this.genre = genre;
+        this.owner = owner;
     }
 
     public String getTitle() {
@@ -49,12 +46,20 @@ public class Book {
         this.genre = genre;
     }
 
-    public String getUserName() {
-        return userName;
+    public int getBookId() {
+        return bookId;
     }
 
-    public void setUserName(String userName) {
-        this.userName = userName;
+    public void setBookId(int bookId) {
+        this.bookId = bookId;
+    }
+
+    public User getUser() {
+        return owner;
+    }
+
+    public void setUser(User owner) {
+        this.owner = owner;
     }
 
     public String toString(){
